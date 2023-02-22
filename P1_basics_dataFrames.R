@@ -22,6 +22,7 @@ df_elem <- df[[1,1]] # double brackets for single element(s)
 df[-2,] # all but 2nd row
 
 # subset of data frame
+# NOT RECOMMENDED IN HELP - USE STD INDEXING ([])
 df_rainyDays <- subset(df,subset = rain==T)
 
 # sorting data frame
