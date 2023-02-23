@@ -12,7 +12,7 @@ head(flights[flights$month==11 & flights$day==3 & flights$carrier=='AA',])
 slice(flights,1:3) # rows 1-3
 head(select(flights,carrier,arr_time))
 
-# can select random rows with slice_sample
+# can sample random rows with slice_sample
 slice_sample(flights,n=10) # 10 random rows
 slice_sample(flights,prop=0.1) # random 10%
 
