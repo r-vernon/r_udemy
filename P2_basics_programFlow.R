@@ -27,3 +27,10 @@ for (curVar in vars) {
   myCode
   if (breakCond) {break} # [optional] break
 }
+
+# pipe operator %>%
+# - functions from library(dplyr)
+arrange(slice_sample(filter(df,mpg>20),n=5),desc(mpg)) # nested, hard to read!
+filter(df, mpg > 20) %>% slice_sample(n = 5) %>% arrange(desc(mpg)) # piped
+# or even...
+df %>% filter(mpg > 20) %>% slice_sample(n = 5) %>% arrange(desc(mpg))
