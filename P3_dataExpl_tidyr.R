@@ -3,7 +3,7 @@ library(tidyr)
 library(data.table)
 
 # make dummy dataframe
-df <- data.frame(Comp=sort(rep(c(1,2,3),3)), 
+df <- data.frame(Comp=rep(1:3,c(3,3,3)), 
                  Year=c(1998,1999,2000,1998,1999,2000,1998,1999,2000),
                  Qtr1=runif(9,0,100), Qtr2=runif(9,0,100), 
                  Qtr3=runif(9,0,100), Qtr4=runif(9,0,100))
