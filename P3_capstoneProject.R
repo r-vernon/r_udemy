@@ -83,6 +83,8 @@ mat_gPlayers <- data.matrix(great_players[c('salary','AB','OBP')])
 # - short-circuit comparisons (&& not &): 0.45s
 # - only update progress bar every 10 items: 0.41s
 # - transposing matrix made no difference (although R col. major)
+# - progress bar was inside wrong loop (p2), now update every item, 0.45s
+# - one last thing, addition (p1vals+p2vals) now incremental: 0.36s
 
 # loop over combos
 stTime <- Sys.time()
@@ -95,23 +97,22 @@ for (p1 in 1:(nGreat-2)){
   
   for (p2 in (p1+1):(nGreat-1)) {
     
-    p2Vals <- mat_gPlayers[p2,]
+    p2Vals <- p1Vals + mat_gPlayers[p2,]
     
     for (p3 in (p2+1):nGreat) {
-      
-      p3Vals <- mat_gPlayers[p3,]
-      currVals <- p1Vals + p2Vals + p3Vals 
+
+      p3Vals <- p2Vals + mat_gPlayers[p3,]
       
       # comparisons ordered from least to most likely
-      if (currVals[3] >= 3*targOBP &&
-          currVals[1] <= targSal && 
-          currVals[2] >= targAB) {
-        valCombos[[idx]] <- c(p1,p2,p3,currVals)
+      if (p3Vals[3] >= 3*targOBP &&
+          p3Vals[1] <= targSal &&
+          p3Vals[2] >= targAB) {
+        valCombos[[idx]] <- c(p1,p2,p3,p3Vals)
         idx <- idx + 1
       }
     }
-    if (!p1%%10) {setTxtProgressBar(pb,p1)}
   }
+  setTxtProgressBar(pb,p1)
 }
 close(pb)
 endTime <-Sys.time()
