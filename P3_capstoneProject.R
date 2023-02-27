@@ -66,34 +66,56 @@ nGreat <- nrow(great_players)
 nCom = choose(nGreat,3) 
 # 192k - manageable to do full search!
 
+# work out which exclusion criterion is most likely to hit
+exclChance <- great_players[c('salary', 'AB', 'OBP')] %>% mutate(
+  across(c('salary', 'AB', 'OBP'), ~ .x + 2*mean(.x))) %>% mutate(
+    salary = salary > targSal, AB = AB < targAB, OBP = OBP < 3*targOBP)
+print(colSums(exclChance))
+# OBP (72) > salary (28) > AB (0)... rearrange comparisons accordingly
+
+# create matrix version of great_players for faster indexing
+mat_gPlayers <- data.matrix(great_players[c('salary','AB','OBP')])
+
+# loop timing optimisation:
+# - basic run: 8.26s
+# - rearranging comparison operators (currVals): 7.91s
+# - using matrix for indexing over data frame: 0.74s!
+# - short-circuit comparisons (&& not &): 0.45s
+# - only update progress bar every 10 items: 0.41s
+# - transposing matrix made no difference (although R col. major)
+
 # loop over combos
+stTime <- Sys.time()
 idx <- 1
 valCombos <- vector(mode='list', length=nCom)
 pb <- txtProgressBar(min = 0, max = (nGreat-2))
 for (p1 in 1:(nGreat-2)){
   
-  p1Vals <- as.numeric(great_players[p1,c('salary','AB','OBP')])
+  p1Vals <- mat_gPlayers[p1,]
   
   for (p2 in (p1+1):(nGreat-1)) {
     
-    p2Vals <- as.numeric(great_players[p2,c('salary','AB','OBP')])
+    p2Vals <- mat_gPlayers[p2,]
     
     for (p3 in (p2+1):nGreat) {
       
-      p3Vals <- as.numeric(great_players[p3,c('salary','AB','OBP')])
+      p3Vals <- mat_gPlayers[p3,]
       currVals <- p1Vals + p2Vals + p3Vals 
       
-      if (currVals[1] <= targSal & 
-          currVals[2] >= targAB & 
-          currVals[3] >= 3*targOBP) {
+      # comparisons ordered from least to most likely
+      if (currVals[3] >= 3*targOBP &&
+          currVals[1] <= targSal && 
+          currVals[2] >= targAB) {
         valCombos[[idx]] <- c(p1,p2,p3,currVals)
         idx <- idx + 1
       }
     }
-    setTxtProgressBar(pb,p1)
+    if (!p1%%10) {setTxtProgressBar(pb,p1)}
   }
 }
 close(pb)
+endTime <-Sys.time()
+sprintf('Took %.2fs',endTime-stTime)
 
 # clean up valCombos and convert to data frame
 # (using sapply to apply transpose)
