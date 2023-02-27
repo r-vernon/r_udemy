@@ -97,21 +97,30 @@ close(pb)
 
 # clean up valCombos and convert to data frame
 # (using sapply to apply transpose)
-test <- tibble(data.frame(t(sapply(valCombos[1:idx-1],c))))
-colnames(test) <- c('P1','P2','P3','Sal','AB','OBP')
+valCombos <- tibble(data.frame(t(sapply(valCombos[1:idx-1],c))))
+colnames(valCombos) <- c('P1','P2','P3','totSal','totAB','avgOBP')
 
-# calculate sum z-scores
-test <- test %>% mutate(OBP = OBP/3)
+# insert player id to dataframe
+valCombos <- valCombos %>% mutate(
+  P1_ID = great_players$playerID[valCombos$P1], 
+  P2_ID = great_players$playerID[valCombos$P2], 
+  P3_ID = great_players$playerID[valCombos$P3], 
+  .before = totSal
+  )
+
+# convert OBP from sum to mean
+valCombos <- valCombos %>% mutate(avgOBP = avgOBP/3)
 
 # calculate z-scores
-test <- test %>% mutate(
-  Sal_Z = -1 * ((Sal-mean(Sal))/sd(Sal)),
-  AB_Z = (AB-mean(AB))/sd(AB),
-  OBP_Z = (OBP-mean(OBP))/sd(OBP)
+# (reversing salary as lower = better!)
+valCombos <- valCombos %>% mutate(
+  Sal_Z = -1 * ((totSal-mean(totSal))/sd(totSal)),
+  AB_Z = (totAB-mean(totAB))/sd(totAB),
+  OBP_Z = (avgOBP-mean(avgOBP))/sd(avgOBP)
   )
 
 # calculate sum z-scores
-test <- test %>% mutate(sum_Z = Sal_Z + AB_Z + OBP_Z)
+valCombos <- valCombos %>% mutate(sum_Z = Sal_Z + AB_Z + OBP_Z)
 
 # sort data frame by best z score
-test <- arrange(test,desc(sum_Z))
+valCombos <- arrange(valCombos,desc(sum_Z))
