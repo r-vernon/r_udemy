@@ -56,3 +56,92 @@
 #  - check corr. matrix (but may not detect multicollinearity)
 #  - can calculate VIF (variance inflation factor), >5-10 = issues!
 #   - fix by dropping preds or combinging them (via z-scores, PCA etc)
+
+# ============================================================================== 
+# load in some data for sample lin. regr.
+
+# load in necessary stuff
+library(tidyverse)
+library(ggthemes)
+library(corrplot) # plot a correlation matrix
+library(corrgram) # create and plot a correlation matrix
+library(patchwork) # allows subplots
+library(caTools) # split data into training/test
+
+# set a seed for consistency
+set.seed(101)
+
+# read in data (making sure chr cols are factors)
+# - reading in student data, want to predict grades (G1, G2, G3)
+df <- read.csv('dataFiles/student-mat.csv', sep=';', stringsAsFactors=T)
+
+# check for nulls (there aren't any!)
+if (any(is.na(df))) {print('found nulls)')}
+
+# ------------------------------------------------------------------------------ 
+# explore data
+
+# grab numeric cols and correlate them
+col_isNum <- sapply(df,is.numeric)
+df_corr <- cor(df[,col_isNum])
+corrplot(df_corr, method = 'color') # print color coded corr. mat.
+
+# alternative, corrgram can just plot without above fuss
+corrgram(df, order=F, lower.panel=panel.shade, upper.panel=panel.cor,
+         text.panel=panel.txt, outer.labels=list(left=T,top=T))
+
+# lets create a histogram to explore grades
+hFmt <- geom_histogram(bins=20, alpha=0.5, fill='blue')
+pl1 <- ggplot(df, aes(x=G1)) + hFmt
+pl2 <- ggplot(df, aes(x=G2)) + hFmt
+pl3 <- ggplot(df, aes(x=G3)) + hFmt
+print(pl1 + pl2 + pl3) # using patchwork package for subplots
+# some weird things:
+# - G1: two notable absences in middle of histogram
+# - G2: whole bunch of peeps who scored 0
+# - G3: as G2 but also a lot who scored a particular score
+
+# ------------------------------------------------------------------------------ 
+# lets build the model! (predicting G3)
+
+# split data into train/test
+df_sample <- sample.split(df$G3, SplitRatio=0.7) # randomly segment
+df_train <- subset(df, df_sample == T) # select training data
+df_test <- subset(df, df_sample == F) # select test data
+
+# build the model (using all vars with .)
+model <- lm(G3 ~ ., data=df_train)
+print(summary(model))
+
+# create a residual plot (using pred vs resid)
+modelOut <- data.frame(pred=fitted(model), resid=residuals(model))
+pl <- ggplot(modelOut, aes(x=pred, y=resid)) + geom_point()
+print(pl)
+# something weird going on, clear line in plot...
+
+# print histogram
+pl <- ggplot(modelOut, aes(res)) + hFmt
+print(pl)
+# note that it's predicting -ve values!
+
+# can also just plot model!
+# - get pred vs. resid (created earlier)
+# - Q-Q plot for normality (and it ain't normal!)
+# - pred vs. standardized resids (outliers)
+# - leverage vs. standardized resids (influential points)
+plot(model)
+
+# ------------------------------------------------------------------------------ 
+# get predictions from model
+
+# predict test data
+G3_pred <- predict(model,df_test)
+
+# calculate MSE, RMSE
+MSE <- mean((df_test$G3 - G3_pred)^2)
+RMSE <- sqrt(mse)
+
+# calculate R^2
+SSE <- sum((G3_pred - df_test$G3)^2)
+SST <- sum((mean(df_test$G3) - df_test$G3)^2)
+R2 <- 1.0 - (SSE/SST)
