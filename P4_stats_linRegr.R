@@ -136,12 +136,14 @@ plot(model)
 
 # predict test data
 G3_pred <- predict(model,df_test)
+G3_resid <- df_test$G3 - G3_pred
 
 # calculate MSE, RMSE
-MSE <- mean((df_test$G3 - G3_pred)^2)
-RMSE <- sqrt(mse)
+MSE <- mean(G3_resid^2)
+RMSE <- sqrt(MSE)
 
 # calculate R^2
-SSE <- sum((G3_pred - df_test$G3)^2)
-SST <- sum((mean(df_test$G3) - df_test$G3)^2)
+SSE <- sum(G3_resid^2)
+SST <- var(df_test$G3) * (nrow(df_test)-1)
+# SST <- sum((mean(df_test$G3) - df_test$G3)^2) # alternative (manual)
 R2 <- 1.0 - (SSE/SST)
