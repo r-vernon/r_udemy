@@ -156,3 +156,6 @@ m1_prob <- predict(m1, df2, type='response')
 m1_results <- ifelse(m1_prob>0.5, 1, 0)
 misClassErr <- mean(m1_results != df2$Survived)
 print(1-misClassErr)
+
+# create confusion matrix
+table(df2$Survived, m1_prob>0.5)
