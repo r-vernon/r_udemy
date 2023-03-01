@@ -53,12 +53,14 @@ print(pl)
 
 # repeat but with date vs count
 # - shows some seasonality to the data!
+# - also shows increasing trend over time
 pl <- ggplot(bike, aes(x=datetime, y=count)) + 
   geom_point(aes(shape=season, color=temp), alpha=0.4)+
   scale_color_gradient(low='blue', high='red')
 print(pl)
 
 # explore seasonality with boxplot
+# - note that increasing trend renders this rather useless!
 pl <- ggplot(bike, aes(x=season, y=count)) + 
   geom_boxplot(aes(color=season))
 print(pl)
@@ -71,6 +73,7 @@ corrplot(corMat, p.mat=corSig$p, method = 'color', diag=F, insig='pch',
          addCoef.col='black', tl.col='black')
 
 # plot count vs hour (working vs nonworking day)
+# - note that hour is at least bimodal, not good for lin. regr.
 pl1 <- ggplot(subset(bike, workingday==T), aes(x=hour, y=count)) + 
   geom_point(aes(color=temp), alpha=0.4, position=position_jitter(w=1, h=0)) + 
   scale_color_viridis(option='viridis') + ggtitle('Working Days')
@@ -90,6 +93,7 @@ summary(m1)
 predict(m1, list(temp=25))
 
 # build more advanced model (~34.6% var)
+# using all preds except listed ones (casual etc)
 m2 <- lm(count ~ . -casual -registered -datetime -atemp, data=bike)
 summary(m2)
 
@@ -156,3 +160,11 @@ summary(m7)
 # now at 36% var so only marginal improvement but all preds (except humidity) sig.
 # still huge nonlinearity
 # m3 seems like the best we've got without resorting to more appropriate tools!
+
+
+# okay one more test, hour as factor!
+m3_test <- lm(count ~ temp + humidity + temp*humidity + factor(hour), data=bike)
+summary(m3_test)
+# 61.0% of var!
+# was an idiot before, hour isn't linear so needed further refining ><
+# not an ideal model but hints at where to go next...
