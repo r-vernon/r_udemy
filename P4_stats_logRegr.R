@@ -91,7 +91,7 @@ set.seed(101)
 
 # using titanic data set from kaggle: https://www.kaggle.com/c/titanic
 # - PassengerID: ID of passenger
-# - Survived: boolean surived (1) or not (0)
+# - Survived: boolean survived (1) or not (0) (training data only)
 # - Pclass: passenger class
 # - Name: name of passenger
 # - Sex: male or female
@@ -103,9 +103,14 @@ set.seed(101)
 # - Cabin: cabin ID
 # - Embarked: location where embarked
 df_train <- read_csv('dataFiles/titanic_train.csv', col_types='ilfcfdiicdcf')
+df_test <- read_csv('dataFiles/titanic_test.csv', col_types='ifcfdiicdcf')
 
 # check for missing data
 missmap(df_train, main='Missing Map', col=c('red','black'), legend=F)
+
+# grab titles
+df_train <- mutate(df_train, Title=sapply(strsplit(Name, '\\,|\\, |\\.'), '[', 2), 
+                   .after=Name)
 
 # create categorical for SibSp and Parch (0, 1, 2+)
 df_train <- mutate(df_train, SibSp2=factor(case_when(
