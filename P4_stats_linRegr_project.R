@@ -101,7 +101,8 @@ m3 <- lm(count ~ temp + humidity + temp*humidity + hour, data=bike)
 summary(m3)
 # adding hour in, now all vars are sig. with ~33.2% var (on par with m2!)
 
-# however, huge non-linearity (q-q plot at higher values...)
+# however, Q-Q plot suggests deviation from normal dist.
+# - too much variability at higher quantiles
 # we know working days has a big impact on hour at least, add it in
 m4 <- lm(count ~ temp + humidity + temp*humidity + hour + 
            workingday + hour*workingday, data=bike)
