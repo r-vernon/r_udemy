@@ -106,12 +106,12 @@ summary(m3)
 m4 <- lm(count ~ temp + humidity + temp*humidity + hour + 
            workingday + hour*workingday, data=bike)
 summary(m4)
-# not noticeably better!
+# not noticeably better! (33.2% var)
 
 # one last thought:
 # - casual: much more likely to depend on weather
 # - registered: more likely to depend on hour
-# - predict seperately and see how well combined they predict count
+# - predict separately and see how well combined they predict count
 m3a <- lm(casual ~ temp + humidity + temp*humidity + hour, data=bike)
 m3b <- lm(registered ~ temp + humidity + temp*humidity + hour, data=bike)
 summary(m3a) # R^2 ~ 37.0% var
