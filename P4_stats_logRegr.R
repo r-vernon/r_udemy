@@ -28,8 +28,6 @@
 #  - model2: let B be baseline, predict A and C
 #  - coefs will vary (e.g. for C in both models) but preds should be same
 #
-# ------------------------------------------------------------------------------
-#
 # Alternative approaches using bayesian statistics
 # - LET Ok be Overall (prior) probability that random x comes from kth class
 #  - i.e. [6xA; 4xB] OA will be 60%, OB will be 40%
@@ -80,3 +78,81 @@
 #  - aka insufficient data to make fine-tuned fk(x) estimates
 
 # ==============================================================================
+# load in some data for logistic regression
+
+# load in necessary stuff
+library(tidyverse)
+library(patchwork) # allows subplots
+library(Amelia) # identify missing data
+library(corrplot)
+library(caTools)
+
+set.seed(101)
+
+# using titanic data set from kaggle: https://www.kaggle.com/c/titanic
+# - PassengerID: ID of passenger
+# - Survived: boolean surived (1) or not (0)
+# - Pclass: passenger class
+# - Name: name of passenger
+# - Sex: male or female
+# - Age: age of passenger
+# - SibSp: number of siblings/spouses passengers had
+# - Parch: number of parents/children passengers had
+# - Ticket: ticket code
+# - Fare: cost of ticket
+# - Cabin: cabin ID
+# - Embarked: location where embarked
+df_train <- read_csv('dataFiles/titanic_train.csv', col_types='ilfcfdiicdcf')
+
+# check for missing data
+missmap(df_train, main='Missing Map', col=c('red','black'), legend=F)
+
+# create categorical for SibSp and Parch (0, 1, 2+)
+df_train <- mutate(df_train, SibSp2=factor(case_when(
+  SibSp==0~'0', SibSp==1~'1', SibSp>1~'2+')), .after=SibSp)
+df_train <- mutate(df_train, Parch2=factor(case_when(
+  Parch==0~'0', Parch==1~'1', Parch>1~'2+')), .after=Parch)
+
+# ------------------------------------------------------------------------------
+# plot data
+
+# survived vs gender (more males on females, but more females survived!)
+pl <- ggplot(df_train, aes(Sex)) + geom_bar(aes(fill=Survived))
+print(pl)
+
+# survived vs class (survival fairly equal across classes)
+pl <- ggplot(df_train, aes(Pclass)) + geom_bar(aes(fill=Survived))
+print(pl)
+
+# survival vs age histogram
+pl <- ggplot(df_train, aes(Age)) + geom_histogram(bins=20, aes(fill=Survived))
+print(pl)
+
+# ------------------------------------------------------------------------------
+# clean up data
+
+# lots of NA in age... fix with model (using class + gender + sib/sp)
+predAge <- lm(Age ~ factor(Pclass) + Sex + SibSp, 
+              data=df_train, na.action=na.omit)
+df_train <- mutate(df_train, 
+                   Age2=coalesce(Age, predict(predAge,df_train)), .after=Age)
+
+# ------------------------------------------------------------------------------
+# build the model
+
+# drop vars we don't want
+df_train <- select(df_train, -PassengerId, -Name, -Age, -SibSp, -Parch, -Ticket, -Cabin)
+
+# create model
+logModel <- glm(Survived ~ ., family=binomial(link='logit'), data=df_train)
+summary(logModel)
+
+# test model by splitting data
+split <- sample.split(df_train$Survived, SplitRatio=0.7)
+df1 <- subset(df_train, split==T)
+df2 <- subset(df_train, split==F)
+m1 <- glm(Survived ~ ., family=binomial(link='logit'), data=df1)
+m1_prob <- predict(m1, df2, type='response')
+m1_results <- ifelse(m1_prob>0.5, 1, 0)
+misClassErr <- mean(m1_results != df2$Survived)
+print(1-misClassErr)
