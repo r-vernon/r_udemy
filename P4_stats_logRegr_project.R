@@ -27,7 +27,6 @@ library(countrycode) # look up countries
 adult <- read_csv('dataFiles/adult_sal.csv', name_repair=make.names, 
                   col_types='idfififffffdddff')
 
-
 # ------------------------------------------------------------------------------
 # initial data massaging
 
@@ -53,8 +52,8 @@ adult$type_employer <- fct_collapse(adult$type_employer,
     Self_emp=c('Self-emp-not-inc', 'Self-emp-inc'))
 
 # collapse education (first making sure levels are ordered)
-eduLevels <- arrange_at(distinct(adult[,c('education','education_num')]),
-    'education_num')
+eduLevels <- distinct(adult[,c('education','education_num')]) %>% 
+    arrange_at('education_num')
 adult$education <- ordered(adult$education, 
     levels=as.vector(eduLevels$education))
 # remap to roughly equal levels
@@ -88,5 +87,53 @@ adult <- mutate(adult, region=countrycode(country,
     origin='country.name', destination='region'), .after=country)
 adult$region <- as.factor(adult$region)
 
+# add binary function for income
+adult$gtr50 <- adult$income == '>50K'
+
 # ------------------------------------------------------------------------------
 # now to visualise
+
+# quick function to est. bin width using various rules
+# not necessarily using it, just as a guide
+nb <- function (x) {
+    x.n <- length(x)
+    x.r <- diff(range(x))
+    nb_St <- ceiling(log2(x.n)) + 1 # Sturges
+    nb_Ri <- ceiling(2*(x.n^(1/3))) # Rice
+    nb_Sc <- ceiling(x.r / (3.49*sd(x)*(x.n^(-1/3)))) # Scotts
+    nb_FD <- ceiling(x.r / (2*IQR(x)*(x.n^(-1/3)))) # Freedman-Diaconis
+    return(c(nb_St, nb_Ri, nb_Sc, nb_FD))
+    }
+
+# check age distribution
+pl <- ggplot(adult, aes(age)) + 
+    geom_histogram(bins=30, color='black', aes(fill=income))
+print(pl)
+
+# check hours worked distribution
+pl <- ggplot(adult, aes(hr_per_week)) + 
+    geom_histogram(bins=40, color='black', aes(fill=income))
+print(pl)
+# huge spike at certain value - may make categorical!
+
+# check by region
+# - group by region, income and summarise counts (n) for each
+# - then drop last group (income) so now only grouped by region
+# - then calc. frequency by dividing each n by the sum of n per region
+regionFreq <- adult %>% group_by(region, income) %>%
+    summarise(n=n(), .groups='drop_last') %>%
+    mutate(freq=n/sum(n))
+pl <- ggplot(regionFreq, aes(x=region, y=freq, fill=income)) + 
+    geom_col(position=position_dodge()) + 
+    theme(axis.text.x = element_text(angle=90))
+print(pl)
+
+# check by education
+eduFreq <- adult %>% group_by(edu, income) %>%
+    summarise(n=n(), .groups='drop_last') %>%
+    mutate(freq=n/sum(n))
+pl <- ggplot(eduFreq, aes(x=edu, y=freq, fill=income)) + 
+    geom_col(position=position_dodge()) + 
+    theme(axis.text.x = element_text(angle=90))
+print(pl)
+# very clear relationship here!
