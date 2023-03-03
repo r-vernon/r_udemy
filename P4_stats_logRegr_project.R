@@ -180,3 +180,14 @@ print(1-misClassErr)
 # create confusion matrix
 cm <- table(adult_test$gtr50, m1_prob>0.5, dnn=c('testData','modelPred'))
 print(round(cm/nrow(adult_test),2)) 
+
+# for context, lets see how well the most naive of models would do!
+train_TP <- sum(adult_train$gtr50) / nrow(adult_train)
+test_TP <- sum(adult_test$gtr50) / nrow(adult_test)
+naive_cm <- matrix(c(
+    (1-test_TP)*(1-train_TP), (1-test_TP)*train_TP, 
+    test_TP*(1-train_TP), test_TP*train_TP), ncol=2, byrow=T)
+colnames(naive_cm) <- c('FALSE', 'TRUE')
+rownames(naive_cm) <- c('FALSE', 'TRUE')
+naive_cm <- as.table(naive_cm)
+print(round(naive_cm,2)) 
