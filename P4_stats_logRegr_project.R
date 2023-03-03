@@ -27,6 +27,11 @@ library(countrycode) # look up countries
 adult <- read_csv('dataFiles/adult_sal.csv', name_repair=make.names, 
                   col_types='idfififffffdddff')
 
+# NOTE
+# - a lot of the options taken where following a guide
+# - I suspect in reality you'd be more cautious collapsing continuous 
+#   predictors into categorical ones, due to loss of data!
+
 # ------------------------------------------------------------------------------
 # initial data massaging
 
@@ -83,9 +88,8 @@ adult <- mutate(adult, country=fct_recode(country,
     'Hong Kong'='Hong', 'South Korea'='South',  'United Kingdom'='England', 
     'United Kingdom'='Scotland', 'Colombia'='Columbia'))
 # then lets remap (using region: 7 regions defined by World Bank Dev. Index)
-adult <- mutate(adult, region=countrycode(country, 
-    origin='country.name', destination='region'), .after=country)
-adult$region <- as.factor(adult$region)
+adult <- mutate(adult, region=as.factor(countrycode(country, 
+    origin='country.name', destination='region')), .after=country)
 
 # add binary function for income
 adult$gtr50 <- adult$income == '>50K'
@@ -114,7 +118,17 @@ print(pl)
 pl <- ggplot(adult, aes(hr_per_week)) + 
     geom_histogram(bins=40, color='black', aes(fill=income))
 print(pl)
-# huge spike at certain value - may make categorical!
+# huge spike at certain value - could make categorical!
+
+# lets work out how you might make 'hr_per_week' categorical
+hrVals <- adult %>% group_by(hr_per_week) %>%  summarise(n=n()) 
+hrVals$cumsum_prop <- round(100 * (cumsum(hrVals$n)/sum(hrVals$n)),2)
+# looks like natural groups might be 
+# - <35 (part time), 15.55% data
+# - 35-40 (full time), 53.96% data
+# - 40+ (long week!), 30.49% data
+# not going to do it though, as why throw away data!
+# (just interesting...)
 
 # check by region
 # - group by region, income and summarise counts (n) for each
@@ -137,3 +151,32 @@ pl <- ggplot(eduFreq, aes(x=edu, y=freq, fill=income)) +
     theme(axis.text.x = element_text(angle=90))
 print(pl)
 # very clear relationship here!
+
+# ------------------------------------------------------------------------------
+# build the model
+
+# split into training and test data
+adult_sample <- sample.split(adult$gtr50, SplitRatio=0.7) # randomly segment
+adult_train <- subset(adult, adult_sample == T) # select training data
+adult_test <- subset(adult, adult_sample == F) # select test data
+
+# create the model
+# - ignoring fnlwt, relationships, capitalGains/Losses as too vague or poor data
+# - ignoring race as don't have balanced sample!
+m1 <- glm(gtr50 ~ age + type_employer + edu + marital + occupation + sex + 
+    hr_per_week + region, family=binomial(link='logit'), data=adult_train)
+summary(m1)
+
+# use stepwise search (def. forwards + backwards) to refine model
+m2 <- step(m1)
+summary(m2)
+
+# calculate misclassification error
+m1_prob <- predict(m1, adult_test, type='response')
+m1_results <- ifelse(m1_prob>0.5, 1, 0)
+misClassErr <- mean(m1_results != adult_test$gtr50)
+print(1-misClassErr)
+
+# create confusion matrix
+cm <- table(adult_test$gtr50, m1_prob>0.5, dnn=c('testData','modelPred'))
+print(round(cm/nrow(adult_test),2)) 
