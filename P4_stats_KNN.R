@@ -50,9 +50,9 @@ print(round(cm1/sum(!trIdx),2))
 # - doing it manually, could also use caret package
 cfIdx <- sample(rep.int(1:5, ceiling(n/5)))[1:n] # sample shuffles
 kRng <- seq(1,100,5)
-allPr <- integer(length(kRng))
-allRe <- integer(length(kRng))
-allF1 <- integer(length(kRng))
+allPr <- double(length(kRng))
+allRe <- double(length(kRng))
+allF1 <- double(length(kRng))
 for (currFold in 1:5) {
     currIdx <- (cfIdx!=currFold)
     trnTrg <- boughtInsur[currIdx]  # making train + test targets as will make
