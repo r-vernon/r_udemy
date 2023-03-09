@@ -79,7 +79,79 @@
 #  - shrinkage param. a (typically 0.01, 0.001), controls pace of learning
 #  - num. splits, d (even d=1 often works well!)
 
-
-
 # ============================================================================== 
-# load in some data for 
+# load in some data for decision trees (specifically random forests)
+
+# load necessary stuff
+library(tidyverse)
+library(rpart) # for dec. trees
+library(rpart.plot) # for plotting dec. trees
+library(randomForest) # for random forests
+library(gbm) # for boosting
+
+# load in data (build-in kyphosis data set)
+# - Kyphosis (spine deformation): absent or present after surgery
+# - Age: age of person (months)
+# - Number: num. vertebrae involved
+# - Start: top-most vertebrae operated on
+df <- kyphosis
+
+# ------------------------------------------------------------------------------ 
+# build the model (simple decision tree)
+
+# using all variables (~ .), method class as outcome is factor
+tree <- rpart(Kyphosis ~ . , method='class', data=df)
+
+# number of ways to explore model:
+# - printcp(fit): display cp table
+# - plotcp(fit): plot x-val. results
+# - rsq.rpart(fit): plot approx. R^2 and rel. error for different splits 
+# - print(fit): print results
+# - summary(fit): detailed results incl. surrogate splits
+# - plot(fit): plot decision tree
+# - text(fit): label the decision tree plot
+# - post(fit, file=...): create postscript plot of decision tree
+
+# check results
+printcp(tree)
+
+# print results (def. option)
+plot(tree, uniform=T) # plot it (with uniform vertical spacing of nodes)
+text(tree, use.n=T, all=T) # add the labels
+
+# print results (with rpart.plot)
+prp(tree) # much nicer!
+
+# confusion matrix
+tree_pred <- predict(tree, df, type='class')
+table(df$Kyphosis, tree_pred, dnn=c('data','pred'))
+
+# ------------------------------------------------------------------------------ 
+# build random forest
+
+# build the random forest model
+# by default mtry = p/3 (regression) or sqrt(p) for classification
+# can set mtry=p to just run bagging, not random forests
+rfModel <- randomForest(Kyphosis ~ ., data=df, importance=T)
+
+# print the result
+print(rfModel)
+
+# confusion matrix
+rfModel_pred <- predict(rfModel, df, type='response')
+table(df$Kyphosis, rfModel_pred, dnn=c('data','pred'))
+
+# ------------------------------------------------------------------------------ 
+# boosting, why not
+
+# remap df so Kyphosis is 0 or 1 (not entirely sure if necessary)
+df2 <- df
+df2$Kyphosis <- ifelse(df2$Kyphosis=='absent',0,1)
+
+boostModel <- gbm(Kyphosis ~ ., data=df2, distribution='bernoulli', 
+                  n.trees=1000, interaction.depth=1)
+
+# confusion matrix
+boostModel_pred <- predict(boostModel, df2, type='response')
+boostModel_pred <- ifelse(boostModel_pred < 0.5, 0, 1)
+table(df2$Kyphosis, boostModel_pred, dnn=c('data','pred'))
