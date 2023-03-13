@@ -75,6 +75,7 @@ isOut <- function(x) {
 df_Out <- sapply(df[,-1],isOut)
 # fair few number of outliers in number categories
 # 12.4% outliers for fulltime undergrads - likely not normallly distributed!
+# (although doesn't matter so much for decision trees)
 
 # for now we'll ignore, but mental note!
 
@@ -110,3 +111,61 @@ print(rfModel$confusion)
 
 # feature importance
 print(rfModel$importance)
+
+# ------------------------------------------------------------------------------
+# just out of interest, lets see if PCA improves things!
+
+# perform pca
+pc <- prcomp(df[,-1], center=T, scale=T)
+summary(pc)
+
+# get proportion variance explained
+pc_pvar <- data.frame(Comp=seq(1,17), pVar=(pc$sdev^2) / sum(pc$sdev^2))
+pc_pvar$cVar <- cumsum(pc_pvar$pVar)
+pl <- ggplot(pc_pvar, aes(x=Comp,y=pVar)) + geom_line() + geom_point()
+print(pl)
+screeplot(pc, type='lines') # alternative
+
+# we'll keep 6, about 80% variance explained
+df_pc <- as.data.frame(pc$x[,1:6])
+df_pc$Private <- df$Private
+
+# lets try the cross-fold validation approach again, see if there's more luck!
+n <- nrow(df)
+nFolds <- 10
+cfIdx <- sample(rep.int(1:nFolds, ceiling(n/nFolds)))[1:n] # sample shuffles
+m1_F1 <- double(nFolds)
+m2_F1 <- double(nFolds)
+for (currFold in 1:nFolds) {
+    
+    currIdx <- (cfIdx!=currFold)
+    trg <- df$Private[!currIdx]
+    
+    # build the models
+    m1 <- randomForest(Private ~ ., data=df[currIdx,])
+    m2 <- randomForest(Private ~ ., data=df_pc[currIdx,])
+    
+    # get the predictions
+    p1 <- predict(m1, df[!currIdx,], type='response')
+    p2 <- predict(m2, df_pc[!currIdx,], type='response')
+    
+    # calculate performance
+    TP1 <- sum(trg=='Yes' & p1=='Yes')
+    FP1 <- sum(trg=='No' & p1=='Yes')
+    FN1 <- sum(trg=='Yes' & p1=='No')
+    TP2 <- sum(trg=='Yes' & p2=='Yes')
+    FP2 <- sum(trg=='No' & p2=='Yes')
+    FN2 <- sum(trg=='Yes' & p2=='No')
+    
+    # Precision and recall
+    Pr1 <- TP1 / (TP1 + FP1)
+    Re1 <- TP1 / (TP1 + FN1)
+    Pr2 <- TP2 / (TP2 + FP2)
+    Re2 <- TP2 / (TP2 + FN2)
+    
+    # F1_score, weighted average of both
+    m1_F1[currFold] <- 2 * (Pr1*Re1)/(Pr1+Re1)
+    m2_F1[currFold] <- 2 * (Pr2*Re2)/(Pr2+Re2)
+}
+
+# m1 had higher F1 on average, lower SD, PCs may not help!
