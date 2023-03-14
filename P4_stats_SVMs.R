@@ -41,5 +41,47 @@
 # SVMs don't extend nicely to multiple classes (>2)
 # - can (e.g.) run K SVMs for K classes, each comparing one class to all others
 # - assign item to class where distance from hyperplane was maximal
+#
+# the actual name, support vector, comes from the vector points that lie on
+# the margin of the hyperplane splitting the categories
 
 # ============================================================================== 
+# run through an example
+
+# load necessary libraries
+library(tidyverse)
+library(ISLR2)
+library(e1071) # for SVMs
+
+# load data
+df <- iris
+
+# create the model
+model <- svm(Species ~ ., data=df)
+summary(model)
+
+# test it's output
+modelPred <- predict(model, df[,-5])
+table(modelPred, df[,5])
+
+# ------------------------------------------------------------------------------ 
+# tune a model
+# - cost: tolerance for errors, less likely to overfit at cost of mistakes
+# - gamma: property of some kernel functions, large gamma = high bias/low 
+#          variance models (less sensitive to data/imposes model) and vice versa
+
+# use tune function
+costRng <- exp(seq(log(1),log(5),length.out=15))
+gamRng <- exp(seq(log(0.01),log(2),length.out=15))
+tuneResults <- tune(svm, train.x=iris[,-5], train.y=iris[,5], kernel='radial', 
+                    ranges=list(cost=costRng, gamma=gamRng))
+summary(tuneResults)
+tuneCost <- tuneResults$best.parameters$cost   # 3.16
+tuneGamma <- tuneResults$best.parameters$gamma # 0.07
+
+# use tuned params
+tuneModel <- svm(Species ~ ., data=df, kernel='radial', 
+                 cost=tuneCost, gamma=tuneGamma)
+tuneModelPred <- predict(tuneModel, df[,-5])
+table(tuneModelPred, df[,5])
+# actually about the same performance on this small dataset :p
