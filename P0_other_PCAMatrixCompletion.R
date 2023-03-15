@@ -1,5 +1,11 @@
 # softImpute package implements this efficiently!
 
+# from what I understand
+# - fill missing data with mean values, compute pca
+# - use a number of those components to predict missing values
+#  - not all as would overfit!
+# - repeat until some accuracy threshold met based on known data
+
 # load the data, scaling it (M=0, SD=1)
 X <- data.matrix(scale(USArrests))
 
