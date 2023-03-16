@@ -98,7 +98,8 @@ clusplot(df, dfScClust$cluster, color=T, shade=T, labels=0, lines=0)
 # actually seemed to do slightly worse!
 
 # and lets see how it does with the principle components
-dfPcClust <- kmeans(df_pc$x[,1:2], centers=3, nstart=25)
+dfPcClust <- kmeans(df_pc$x[,1], centers=3, nstart=25)
 table(dfPcClust$cluster,dfLabel)
 clusplot(df, dfPcClust$cluster, color=T, shade=T, labels=0, lines=0)
 # about on par, ever so slightly worse...
+# yet slightly better with just 1 PC! (margin of error though...)
