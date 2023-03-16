@@ -2,7 +2,6 @@
 # load necessary packages
 library(tidyverse)
 library(corrplot)
-library(cluster)
 
 # load in data files
 df1 <- read_delim('./dataFiles/winequality-red.csv', delim=';')
@@ -21,6 +20,19 @@ df$label <- NULL
 dfM <- sapply(df,mean)
 dfSD <- sapply(df,sd)
 # very variable, will need to scale!
+
+# lets test the SS choice for choosing K (although we'll be using K=2)
+totSSE <- double(10)
+inc <- 1
+for (K in seq(1,10)) {
+    dfClust <- kmeans(scale(df), centers=K, nstart=25)
+    totSSE[inc] <- dfClust$tot.withinss
+    inc <- inc +1
+}
+pl <- ggplot(data=NULL, aes(x=seq(1,10), y=totSSE)) + 
+    geom_line() + geom_point()
+print(pl)
+# interestingly, 3 clusters looks more promising than 2...
 
 # ------------------------------------------------------------------------------
 
@@ -76,7 +88,6 @@ print(pl)
 
 dfClust <- kmeans(scale(df), centers=2, nstart=25)
 table(dfClust$cluster,dfLab)
-clusplot(scale(df), dfClust$cluster, color=T, shade=T, labels=0, lines=0)
 # does an incredibly good job!
 # note that without scaling, it does pretty damn terribly...
 
@@ -84,3 +95,9 @@ clusplot(scale(df), dfClust$cluster, color=T, shade=T, labels=0, lines=0)
 dfPCClust <- kmeans(df_3PCs, centers=2, nstart=25)
 table(dfPCClust$cluster,dfLab)
 # does slightly worse, extra data was helping it seems!
+
+# out of interest, see how it allocates 3
+dfPCClust <- kmeans(scale(df), centers=3, nstart=25)
+table(dfPCClust$cluster,dfLab)
+# red gets it's own cluster, white splits pretty neatly into two...
+# maybe white + rose?
