@@ -97,7 +97,7 @@ table(dfPCClust$cluster,dfLab)
 # does slightly worse, extra data was helping it seems!
 
 # out of interest, see how it allocates 3
-dfPCClust <- kmeans(scale(df), centers=3, nstart=25)
-table(dfPCClust$cluster,dfLab)
+df3Clust <- kmeans(scale(df), centers=3, nstart=25)
+table(df3Clust$cluster,dfLab)
 # red gets it's own cluster, white splits pretty neatly into two...
 # maybe white + rose?
